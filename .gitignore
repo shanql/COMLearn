@@ -1,0 +1,12 @@
+*.ncb
+*.user
+*.manifest
+*.obj
+*.pdb
+*.idb
+*.res
+/Chap5/Component1/Debug/*.htm
+*.htm
+*.dep
+*.ilk
+*.suo
