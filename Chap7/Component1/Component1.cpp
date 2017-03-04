@@ -15,13 +15,13 @@ static long g_cComponents = 0;			//Count of active components
 static long g_cServerLocks = 0;			//Count of locks
 
 // Friendly name of component
-const char g_szFriendlyName[] = "Inside COM, Chapter 7 Example";
+const TCHAR g_szFriendlyName[] = "Inside COM, Chapter 7 Example";
 
 // Version-independent ProgID
-const char g_szVerIndProgID[] = "InsideCOM.Chap07";
+const TCHAR g_szVerIndProgID[] = "InsideCOM.Chap07";
 
 // ProgID
-const char g_szProgID[] = "InsideCOM.Chap07.1";
+const TCHAR g_szProgID[] = "InsideCOM.Chap07.1";
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -222,15 +222,51 @@ STDAPI DllCanUnloadNow(void)
 STDAPI  DllGetClassObject(
 	const CLSID& clsid, const IID& iid, void** ppv)
 {
-	return S_OK;
+	trace("DllGetClassObject:\tCreate class factory");
+	// Can we create this component
+	if ( clsid != CLSID_Component1 )
+	{
+		return CLASS_E_CLASSNOTAVAILABLE;
+	}
+
+	// Create class factory
+	CFactory* pFactory = new CFactory();
+	if ( NULL == pFactory )
+	{
+		return E_OUTOFMEMORY;
+	}
+
+	// Get requested interface
+	HRESULT hr = pFactory->QueryInterface( iid, ppv );
+	pFactory->Release();
+
+	return hr;
 }
 
 STDAPI DllRegisterServer(void)
 {
+	LPOLESTR pClsidStr = NULL;
+	StringFromCLSID( CLSID_Component1, &pClsidStr );
+
+	
 	return S_OK;
 }
 
 STDAPI DllUnregisterServer(void)
 {
 	return S_OK;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Dll module information
+//
+BOOL APIENTRY DllMain( HANDLE hDllHandle, DWORD dwReason, LPVOID lpreserved )
+{
+	if ( dwReason == DLL_PROCESS_ATTACH )
+	{
+		g_hModule = hDllHandle;
+	}
+	return TRUE;
 }
