@@ -1,9 +1,10 @@
 #include <iostream>
+#include "../../Common/Utils.h"
 #include "../../Common/IFace.h"
 
 using namespace std;
 
-void trace( const char* msg ) { cout << msg << endl;}
+//void trace( const char* msg ) { cout << msg << endl;}
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -15,13 +16,13 @@ static long g_cComponents = 0;			//Count of active components
 static long g_cServerLocks = 0;			//Count of locks
 
 // Friendly name of component
-const TCHAR g_szFriendlyName[] = "Inside COM, Chapter 7 Example";
+const TCHAR g_szFriendlyName[] = _T("Inside COM, Chapter 7 Example");
 
 // Version-independent ProgID
-const TCHAR g_szVerIndProgID[] = "InsideCOM.Chap07";
+const TCHAR g_szVerIndProgID[] = _T("InsideCOM.Chap07");
 
 // ProgID
-const TCHAR g_szProgID[] = "InsideCOM.Chap07.1";
+const TCHAR g_szProgID[] = _T("InsideCOM.Chap07.1");
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -245,15 +246,25 @@ STDAPI  DllGetClassObject(
 
 STDAPI DllRegisterServer(void)
 {
-	LPOLESTR pClsidStr = NULL;
-	StringFromCLSID( CLSID_Component1, &pClsidStr );
+	if ( !RegisterServer( g_hModule, CLSID_Component1,
+		g_szFriendlyName, g_szProgID, g_szVerIndProgID ))
+	{
+		trace("DllRegisterServer failed");
+		return S_FALSE;
+	}
 
-	
+	trace("DllRegisterServer successfully");
 	return S_OK;
 }
 
 STDAPI DllUnregisterServer(void)
 {
+	if ( !UnRegisterServer( CLSID_Component1, g_szProgID, g_szVerIndProgID ))
+	{
+		trace("DllUnregisterServer failed");
+		return S_FALSE;
+	}
+	trace("DllUnregisterServer successfully");
 	return S_OK;
 }
 
@@ -266,7 +277,7 @@ BOOL APIENTRY DllMain( HANDLE hDllHandle, DWORD dwReason, LPVOID lpreserved )
 {
 	if ( dwReason == DLL_PROCESS_ATTACH )
 	{
-		g_hModule = hDllHandle;
+		g_hModule = (HMODULE)hDllHandle;
 	}
 	return TRUE;
 }
