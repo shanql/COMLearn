@@ -23,4 +23,6 @@ extern "C"
 	extern const IID IID_IZ;
 
 	extern const CLSID CLSID_Component1;
+	extern const CLSID CLSID_Component8_1;
+	extern const CLSID CLSID_Component8_2;
 };

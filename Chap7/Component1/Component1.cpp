@@ -61,6 +61,7 @@ CA::CA():m_cRef(1)
 CA::~CA()
 {
 	InterlockedDecrement( &g_cComponents );
+	trace("Component1:\t\tDestroy self");
 }
 
 HRESULT __stdcall CA::QueryInterface( const IID& iid, void** ppv )
@@ -121,7 +122,7 @@ public:
 	virtual HRESULT __stdcall CreateInstance(IUnknown *pUnkOuter, const IID& riid, void **ppv );
 	virtual HRESULT __stdcall LockServer(BOOL fLock );
 
-	CFactory():m_cRef(0){}
+	CFactory():m_cRef(1){}
 	~CFactory();
 
 private:
