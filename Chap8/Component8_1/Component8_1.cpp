@@ -77,7 +77,11 @@ CA::~CA()
 	pUnknownOuter->AddRef();
 
 	// Properly release the pointer; there may be per-interface reference counts
-	m_pIY->Release();
+	//m_pIY->Release();
+	if ( NULL != m_pIY )
+	{
+		m_pIY->Release();
+	}
 
 	// Release contained component
 	if ( m_pUnknownInner )
@@ -112,6 +116,7 @@ HRESULT __stdcall CA::Init()
 	{
 		CMPT1Trace("Inner component does not support interface IY");
 		m_pUnknownInner->Release();
+		m_pUnknownInner = NULL; //important assign, crash if not
 		return E_FAIL;
 	}
 

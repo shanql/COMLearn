@@ -151,7 +151,7 @@ public:
 	virtual HRESULT __stdcall LockServer( BOOL bLock );
 
 	CFactory():m_cRef(1){}
-	~CFactory(){ trace("CFactory destroy"); }
+	~CFactory(){ CMPT2Trace("CFactory destroy"); }
 
 private:
 	long m_cRef;
@@ -248,7 +248,7 @@ STDAPI DllCanUnloadNow()
 STDAPI DllGetClassObject( const CLSID& clsid, const IID& iid, void** ppv )
 {
 	// Can we create this component?
-	if ( clsid != CLSID_Component8_1 )
+	if ( clsid != CLSID_Component8_2 )
 	{
 		return CLASS_E_CLASSNOTAVAILABLE;
 	}
