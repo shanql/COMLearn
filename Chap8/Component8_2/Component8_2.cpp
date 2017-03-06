@@ -5,11 +5,10 @@
 
 using namespace std;
 
-
-void CMPT1Trace( const char* msg ) { cout << "Component8_1\t\t"; trace(msg); }
+void CMPT2Trace( const char* msg ) { cout << "Component8_2\t\t"; trace(msg); }
 
 //
-// Component8_1
+// Component8_2
 //
 
 //////////////////////////////////////////////////////////////////////////
@@ -21,131 +20,94 @@ static HMODULE g_hModule = NULL;
 static long g_cComponents = 0;
 static long g_cServerLocks = 0;
 
-const TCHAR g_szFriendlyName[] = _T("Inside COM By Shanql, Chapter 8 Example, Component1");
-const TCHAR g_szVerIndProgID[] = _T("InsideComByShanql.Chap8.Component1");
-const TCHAR g_szProgID[] = _T("InsideComByShanql.Chap8.Component1.1");
+const TCHAR g_szFriendlyName[] = _T("Inside COM By Shanql, Chapter 8 Example, Component2");
+const TCHAR g_szVerIndProgID[] = _T("InsideComByShanql.Chap8.Component2");
+const TCHAR g_szProgID[] = _T("InsideComByShanql.Chap8.Component2.1");
 
 
 //////////////////////////////////////////////////////////////////////////
+// Nondelegating IUnknown interface
+//
+struct INondelegatingUnknown
+{
+	virtual HRESULT __stdcall NondelegatingQueryInterface( const IID& iid, void** ppv ) = 0;
+	virtual ULONG __stdcall NondelegatingAddRef() = 0;
+	virtual ULONG __stdcall NondelegatingRelease() = 0;
+};
 
-class CA: public IX
+class CB: public IY, public INondelegatingUnknown
 {
 public:
-	// IUnknown
-	virtual HRESULT __stdcall QueryInterface( const IID& iid, void** ppv );
-	virtual ULONG __stdcall AddRef();
-	virtual ULONG __stdcall Release();
+	// Delegating IUnknown
+	virtual HRESULT __stdcall QueryInterface( const IID& iid, void** ppv )
+	{
+		CMPT2Trace("CompoDelegate QueryInterface");
+		return m_pUnknownOuter->QueryInterface( iid, ppv );
+	}
+	virtual ULONG __stdcall AddRef()
+	{
+		CMPT2Trace("Delegate AddRef");
+		return m_pUnknownOuter->AddRef();
+	}
+	virtual ULONG __stdcall Release()
+	{
+		CMPT2Trace("Delegate Release");
+		return m_pUnknownOuter->Release();
+	}
 
-	// Interface IX
-	virtual void __stdcall Fx() { cout << "Fx" << endl; }
+	// Nondelegating IUnknown
+	virtual HRESULT __stdcall NondelegatingQueryInterface( const IID& iid, void** ppv );
+	virtual ULONG __stdcall NondelegatingAddRef();
+	virtual ULONG __stdcall NondelegatingRelease();
 
-	CA();
+	// Interface IY
+	virtual void __stdcall Fy() { cout << "Fy" << endl; }
 
-	~CA();
+	CB( IUnknown* pUnknownOuter );
 
-	// Initialization function called by the class factory
-	HRESULT __stdcall Init();
+	~CB();
 
 private:
 	long m_cRef;
-
-	// Pointer to the aggregated component's IY interface
-	// (We do not have to retain an IY pointer, However, we
-	// can use it in QueryInterface)
-	IY* m_pIY;
-
-	// Pointer to inner component's IUnknown
-	IUnknown* m_pUnknownInner;
+	IUnknown* m_pUnknownOuter;
 };
 
-CA::CA()
-:m_cRef( 1 ), m_pUnknownInner( NULL ), m_pIY( NULL )
+CB::CB( IUnknown* pUnknownOuter )
+:m_cRef( 1 )
 {
 	InterlockedIncrement( &g_cComponents );
+	if ( pUnknownOuter == NULL )
+	{
+		CMPT2Trace("Not aggregating;delegate to nondelegating IUnknown.");
+		m_pUnknownOuter = reinterpret_cast<IUnknown*>( static_cast<INondelegatingUnknown*>(this) );
+	}
+	else
+	{
+		CMPT2Trace("Aggregating,delegate to outer IUnknown");
+		m_pUnknownOuter = pUnknownOuter;
+	}
 }
 
-CA::~CA()
+CB::~CB()
 {
 	InterlockedDecrement( &g_cComponents );
-	CMPT1Trace("CA::Destroy self");
-
-	// Prevent recursive destruction on next AddRef/Release pair
-	m_cRef = 1;
-
-	// Counter the pUnknownOuter->Release in the Init method
-	IUnknown* pUnknownOuter = this;
-	pUnknownOuter->AddRef();
-
-	// Properly release the pointer; there may be per-interface reference counts
-	m_pIY->Release();
-
-	// Release contained component
-	if ( m_pUnknownInner )
-	{
-		m_pUnknownInner->Release();
-	}
+	CMPT2Trace("Destroy self");
 }
 
-// Initialize the Component by creating the contained component
-HRESULT __stdcall CA::Init()
-{
-	// Get the pointer to the outer unknown
-	// Since this component is not aggregated, the outer unknown
-	// is the same as the this pointer
-	IUnknown* pUnknownOuter = this;
-	CMPT1Trace("Create inner component");
-	HRESULT hr = CoCreateInstance( CLSID_Component8_2,
-		pUnknownOuter, //Outer component's IUnknown
-		CLSCTX_INPROC_SERVER,
-		IID_IUnknown, // IUnknown when aggregating
-		(void**)&m_pUnknownInner );
-	if ( FAILED(hr) )
-	{
-		CMPT1Trace( "Could not create contained component");
-		return E_FAIL;
-	}
 
-	// This call will increment the reference count on the outer component
-	CMPT1Trace( "Get the IY interface from the inner component");
-	hr = m_pUnknownInner->QueryInterface( IID_IY, (void**)&m_pIY );
-	if ( FAILED(hr) )
-	{
-		CMPT1Trace("Inner component does not support interface IY");
-		m_pUnknownInner->Release();
-		return E_FAIL;
-	}
-
-	// We need to release the reference count added to the 
-	// outer component in the above call. So call Release
-	// on the pointer you passed to CoCreateInstance
-	pUnknownOuter->Release();
-
-	return S_OK;
-}
 
 //
 // IUnknown implementation
 //
-HRESULT __stdcall CA::QueryInterface( const IID& iid, void** ppv )
+HRESULT __stdcall CB::NondelegatingQueryInterface( const IID& iid, void** ppv )
 {
 	if ( iid == IID_IUnknown )
 	{
-		*ppv = static_cast<IUnknown*>(this);
-	}
-	else if ( iid == IID_IX )
-	{
-		*ppv = static_cast<IX*>(this);
+		*ppv = static_cast<INondelegatingUnknown*>(this);
 	}
 	else if ( iid == IID_IY )
 	{
-		CMPT1Trace("Return inner component's IY interface");
-#if 1
-		// You can query for the interface
-		return m_pUnknownInner->QueryInterface( iid, ppv );
-#else	
-		// Or you can return a cached pointer
-		*ppv = m_pIY;
-#endif
+		*ppv = static_cast<IY*>(this);
 	}
 	else
 	{
@@ -157,12 +119,12 @@ HRESULT __stdcall CA::QueryInterface( const IID& iid, void** ppv )
 	return S_OK;
 }
 
-ULONG __stdcall CA::AddRef()
+ULONG __stdcall CB::NondelegatingAddRef()
 {
 	return InterlockedIncrement( &m_cRef );
 }
 
-ULONG __stdcall CA::Release()
+ULONG __stdcall CB::NondelegatingRelease()
 {
 	if ( InterlockedDecrement( &m_cRef ) == 0 )
 	{
@@ -189,7 +151,7 @@ public:
 	virtual HRESULT __stdcall LockServer( BOOL bLock );
 
 	CFactory():m_cRef(1){}
-	~CFactory(){ CMPT1Trace("CFactory destroy"); }
+	~CFactory(){ trace("CFactory destroy"); }
 
 private:
 	long m_cRef;
@@ -230,31 +192,23 @@ ULONG __stdcall CFactory::Release()
 HRESULT __stdcall CFactory::CreateInstance( IUnknown* pUnknownOuter, const IID& iid, void** ppv )
 {
 	HRESULT hr = E_FAIL;
-	// Cannot aggregate
-	if ( pUnknownOuter != NULL )
+	// Aggregate only if the requested iid is IID_IUnknown
+	if ( pUnknownOuter != NULL && ( iid != IID_IUnknown ) )
 	{
 		return CLASS_E_NOAGGREGATION;
 	}
 
 	// Create component
-	CA* pA = new CA;
-	if ( !pA )
+	CB* pB = new CB( pUnknownOuter );
+	if ( !pB )
 	{
 		return E_OUTOFMEMORY;
 	}
 
-	// Initialize the component
-	hr = pA->Init();
-	if ( FAILED(hr) )
-	{
-		// Initialization failed, delete component
-		pA->Release();
-		return hr;
-	}
 
 	// Get the requested interface
-	hr = pA->QueryInterface( iid, ppv );
-	pA->Release();
+	hr = pB->NondelegatingQueryInterface( iid, ppv );
+	pB->NondelegatingRelease();
 	return hr;
 }
 
@@ -319,7 +273,7 @@ STDAPI DllRegisterServer()
 {
 	return RegisterServer( 
 		g_hModule, 
-		CLSID_Component8_1, 
+		CLSID_Component8_2, 
 		g_szFriendlyName,
 		g_szProgID,
 		g_szVerIndProgID );
@@ -328,7 +282,7 @@ STDAPI DllRegisterServer()
 STDAPI DllUnregisterServer()
 {
 	return UnRegisterServer( 
-		CLSID_Component8_1, 
+		CLSID_Component8_2, 
 		g_szProgID, 
 		g_szVerIndProgID );
 }
